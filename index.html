@@ -160,15 +160,20 @@
     }
     .player-item:last-child { margin-bottom: 0; }
     .player-item { touch-action: auto; }
-    .player-item.editable { cursor: grab; touch-action: none; }
-    .player-item.editable:active { cursor: grabbing; }
+    .player-item.editable { touch-action: auto; }
     .player-item.dragging { opacity: 0.3; transform: scale(0.97); }
     .player-item.drag-over {
       background: var(--item-hover); border-color: var(--accent);
       transform: translateY(-2px); box-shadow: 0 6px 18px rgba(226,183,20,0.15);
     }
 
-    .drag-handle { color: var(--border); font-size: 16px; flex-shrink: 0; display: none; }
+    .move-btns { display: none; }
+    .drag-handle {
+      color: var(--muted); font-size: 18px; flex-shrink: 0;
+      display: none; cursor: grab; padding: 0 4px;
+      touch-action: none;
+    }
+    .drag-handle:active { cursor: grabbing; }
     .editable .drag-handle { display: block; }
 
     .rank-num { font-family: 'Bebas Neue', cursive; font-size: 16px; color: var(--muted); width: 20px; text-align: center; flex-shrink: 0; }
@@ -291,7 +296,6 @@
 
   const pools = { ab: [], cd: [] };
   let unsubs = {};
-  let dragSrc = { pool: null, index: null };
   let isEditMode = false;
 
   // ── STATUS ───────────────────────────────────────────────
@@ -428,15 +432,25 @@
     });
   });
 
-  // ── DRAG & DROP ───────────────────────────────────────────
-  function addDrag(el, pool, index) {
+  // ── DRAG (handle only) ────────────────────────────────────
+  let dragSrc = { pool: null, index: null };
+
+  function addDragHandle(handle, el, pool, index) {
     if (!isEditMode) return;
 
-    el.addEventListener('dragstart', () => {
+    // Desktop
+    handle.addEventListener('mousedown', () => { el.draggable = true; });
+    document.addEventListener('mouseup', () => { el.draggable = false; }, { once: true });
+
+    el.addEventListener('dragstart', e => {
+      if (!el.draggable) { e.preventDefault(); return; }
       dragSrc = { pool, index };
       setTimeout(() => el.classList.add('dragging'), 0);
     });
-    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      el.draggable = false;
+    });
     el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
     el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
     el.addEventListener('drop', async e => {
@@ -451,13 +465,16 @@
       if (sp !== pool) await save(sp);
     });
 
-    // Touch
-    let tsIdx = index, tsPool = pool;
-    el.addEventListener('touchstart', () => {
+    // Mobile — touch hanya dari handle
+    let tsIdx = index, tsPool = pool, touching = false;
+    handle.addEventListener('touchstart', e => {
+      touching = true;
       tsIdx = index; tsPool = pool;
       el.classList.add('dragging');
     }, { passive: true });
-    el.addEventListener('touchmove', e => {
+
+    handle.addEventListener('touchmove', e => {
+      if (!touching) return;
       e.preventDefault();
       const y = e.touches[0].clientY;
       document.querySelectorAll('.player-item').forEach(c => {
@@ -466,7 +483,10 @@
         if (y >= r.top && y <= r.bottom) c.classList.add('drag-over');
       });
     }, { passive: false });
-    el.addEventListener('touchend', async e => {
+
+    handle.addEventListener('touchend', async e => {
+      if (!touching) return;
+      touching = false;
       el.classList.remove('dragging');
       const y = e.changedTouches[0].clientY;
       const items = [...document.querySelectorAll('.player-item')];
@@ -504,7 +524,6 @@
     list.forEach((name, i) => {
       const el = document.createElement('div');
       el.className = 'player-item' + (isEditMode ? ' editable' : '');
-      el.draggable = isEditMode;
       el.dataset.pool = pool;
       el.dataset.index = i;
       el.innerHTML = `
@@ -513,7 +532,10 @@
         <div class="player-name-text">${esc(name)}</div>
         <button class="btn-del" onclick="deletePlayer('${pool}',${i})">×</button>
       `;
-      addDrag(el, pool, i);
+      if (isEditMode) {
+        const handle = el.querySelector('.drag-handle');
+        addDragHandle(handle, el, pool, i);
+      }
       container.appendChild(el);
     });
   }
