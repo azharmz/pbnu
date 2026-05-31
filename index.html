@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Turnamen Intern PB. NU 2026</title>
+  <title>Intern PB. NU 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -115,7 +117,7 @@
     .pools-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
     @media (max-width: 600px) { .pools-wrapper { grid-template-columns: 1fr; } }
 
-    .pool { background: var(--card-bg); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+    .pool { background: var(--card-bg); border-radius: 14px; display: flex; flex-direction: column; }
     .pool-header {
       padding: 12px 16px; display: flex; align-items: center;
       justify-content: space-between; border-bottom: 1px solid var(--border);
@@ -153,11 +155,12 @@
       background: var(--item-bg); border: 1px solid var(--border);
       border-radius: 8px; padding: 10px 12px; margin-bottom: 6px;
       display: flex; align-items: center; gap: 10px;
-      user-select: none; touch-action: none;
+      user-select: none;
       transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
     }
     .player-item:last-child { margin-bottom: 0; }
-    .player-item.editable { cursor: grab; }
+    .player-item { touch-action: auto; }
+    .player-item.editable { cursor: grab; touch-action: none; }
     .player-item.editable:active { cursor: grabbing; }
     .player-item.dragging { opacity: 0.3; transform: scale(0.97); }
     .player-item.drag-over {
@@ -202,7 +205,8 @@
   <div class="modal">
     <h2>🔐 Mode Edit</h2>
     <p>Masukkan password untuk mengaktifkan mode edit</p>
-    <input type="password" id="passInput" placeholder="••••••••" maxlength="30" />
+    <input type="text" name="username" autocomplete="username" value="admin" style="display:none" />
+    <input type="password" id="passInput" name="password" autocomplete="current-password" placeholder="••••••••" maxlength="30" />
     <div class="modal-error" id="passError"></div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">Batal</button>
@@ -214,7 +218,7 @@
 <header>
   <div class="header-left">
     <span style="font-size:22px">🏸</span>
-    <h1>TURNAMEN INTERN PB. NU 2026</h1>
+    <h1>INTERN PB. NU 2026</h1>
     <span class="badge">BADMINTON</span>
   </div>
   <div class="header-right">
@@ -530,11 +534,17 @@
   // ── INIT ──────────────────────────────────────────────────
   const FIREBASE_URL = 'https://pbnu-3dd18-default-rtdb.asia-southeast1.firebasedatabase.app';
   document.getElementById('dbUrl').value = FIREBASE_URL;
-  setTimeout(() => {
+
+  function tryInit() {
+    if (typeof window.initFirebase !== 'function') {
+      setTimeout(tryInit, 100);
+      return;
+    }
     const ok = window.initFirebase(FIREBASE_URL);
     if (ok) listenAll();
     else { render('ab'); render('cd'); }
-  }, 400);
+  }
+  tryInit();
 </script>
 </body>
 </html>
